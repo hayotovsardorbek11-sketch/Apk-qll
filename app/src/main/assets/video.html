@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; }
+        video { width: 100%; max-height: 240px; background: #000; }
+        .p-10 { padding: 10px; }
+        .rec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
+        .rec-card { background: #111; border-radius: 5px; overflow: hidden; font-size: 11px; border: 1px solid #222; }
+        .rec-card img { width: 100%; height: 90px; object-fit: cover; }
+    </style>
+</head>
+<body>
+    <video id="v" controls playsinline autoplay></video>
+    <div class="p-10"><h3 id="t" style="margin:0"></h3></div>
+    <hr style="border:0; border-top:1px solid #222">
+    <div class="p-10"><b>Tavsiya etiladi</b></div>
+    <div id="recs" class="rec-grid"></div>
+
+<script>
+    async function load(u, n, r) {
+        document.getElementById('v').src = u;
+        document.getElementById('v').poster = r;
+        document.getElementById('t').innerText = n;
+        loadRecs();
+    }
+
+    async function loadRecs() {
+        const gist = "https://gist.githubusercontent.com/ashurovferuz81-ui/d167860ed3a828ab3c97953a6eace1e5/raw/kino.json";
+        try {
+            const res = await fetch(gist + '?v=' + Date.now());
+            const data = await res.json();
+            let list = data.kinolar.sort(() => .5 - Math.random()).slice(0, 4);
+            document.getElementById('recs').innerHTML = list.map(m => `
+                <div class="rec-card" onclick="load('${m.video}','${m.nomi}','${m.rasm}'); window.scrollTo(0,0)">
+                    <img src="${m.rasm}"><div style="padding:5px">${m.nomi}</div>
+                </div>`).join('');
+        } catch(e) {}
+    }
+</script>
+</body>
+</html>

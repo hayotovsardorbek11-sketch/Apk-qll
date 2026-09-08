@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <script>window.yaContextCb=window.yaContextCb||[]</script>
+    <script src="https://yandex.ru/ads/system/context.js" async></script>
+    
+    <style>
+        :root { --red: #E50914; --bg: #080808; }
+        body { background: var(--bg); color: #fff; font-family: sans-serif; margin: 0; padding: 0; overflow-x: hidden; }
+        
+        /* Qidiruv */
+        .header { padding: 12px; background: #111; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #222; }
+        #search { width: 90%; padding: 12px; border-radius: 25px; border: none; background: #222; color: #fff; outline: none; display: block; margin: 0 auto; }
+
+        /* Banner */
+        #topBanner { display: none; width: 95%; margin: 10px auto; height: 85px; border-radius: 10px; overflow: hidden; border: 1px solid #333; }
+        #topBanner img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Grid */
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 12px; min-height: 300px; }
+        .card { background: #141414; border-radius: 12px; overflow: hidden; border: 1px solid #222; position: relative; transition: 0.3s; }
+        .card:active { transform: scale(0.95); }
+        .card img { width: 100%; height: 170px; object-fit: cover; }
+        .title { padding: 8px; font-size: 13px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; }
+
+        /* Yandex RTB Block joyi */
+        .yandex-rtb-container { margin: 15px auto; max-width: 100%; min-height: 100px; text-align: center; }
+
+        /* Shorts/Kino Tanlov Oynasi */
+        #choiceModal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); z-index: 20000; align-items: center; justify-content: center; }
+        .modal-box { width: 80%; background: #1a1a1a; padding: 25px; border-radius: 20px; text-align: center; border: 1px solid #333; }
+        .choice-btn { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: none; font-weight: bold; font-size: 16px; color: #fff; cursor: pointer; }
+
+        /* Reklamalar qatlami */
+        #adLayer { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index: 30000; }
+        #adContentWrapper { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
+        
+        #adTimer { position: absolute; top: 25px; left: 25px; background: rgba(0,0,0,0.8); color:#fff; padding: 8px 15px; border-radius: 20px; font-weight: bold; z-index: 30005; }
+        #closeAd { position: absolute; top: 25px; right: 25px; background: var(--red); color: #fff; border: none; width: 45px; height: 45px; border-radius: 50%; display: none; font-size: 22px; z-index: 30006; }
+
+        /* Popup Bildirishnoma */
+        #popupAd { display: none; position: fixed; bottom: 20px; left: 5%; width: 90%; background: var(--red); padding: 15px; border-radius: 12px; z-index: 15000; box-shadow: 0 5px 15px rgba(0,0,0,0.5); font-weight: bold; }
+
+        /* Pagination */
+        .pagination { display: flex; justify-content: center; gap: 8px; padding: 20px; flex-wrap: wrap; }
+        .p-btn { padding: 8px 15px; background: #222; border: none; color: #fff; border-radius: 8px; font-weight: bold; }
+        .p-btn.active { background: var(--red); }
+    </style>
+</head>
+<body>
+
+    <div id="adview1"></div>
+    <div class="header"><input type="search" id="search" placeholder="Kino qidirish..." oninput="doSearch()"></div>
+    <div id="topBanner" onclick="clickBanner()"></div>
+    
+    <div id="grid" class="grid"></div>
+
+    <div id="yandex_container" class="yandex-rtb-container"></div>
+
+    <div id="pages" class="pagination"></div>
+
+    <div id="choiceModal" onclick="this.style.display='none'">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h3 style="margin-top:0">Qanday ko'rasiz?</h3>
+            <button class="choice-btn" style="background:#007bff" onclick="startKino()">🎬 To'liq Kino</button>
+            <button class="choice-btn" style="background:#28a745" onclick="startShorts()">📱 Shorts (Kaltaxat)</button>
+            <button class="choice-btn" style="background:#444" onclick="document.getElementById('choiceModal').style.display='none'">Bekor qilish</button>
+        </div>
+    </div>
+
+    <div id="adLayer">
+        <div id="adTimer"></div>
+        <button id="closeAd" onclick="closeAd(event)">✖</button>
+        <div id="adContentWrapper">
+             <div id="adBox" style="position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 10px;">
+                <div id="adClicker" onclick="clickAd()" style="position:absolute; width:100%; height:100%; z-index:30002; cursor: pointer;"></div>
+                <div id="adContent" style="width:100%; height:100%; display: flex; align-items: center; justify-content: center; z-index:30001"></div>
+                <div id="yandex_inter_box" style="width:100%; height:100%; display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="popupAd" onclick="clickPopup()">
+        <span id="popMsg"></span>
+        <span style="float:right">➔</span>
+    </div>
+
+<script>
+    const DB = "https://sarikmovieapp-default-rtdb.firebaseio.com";
+    const GIST = "https://gist.githubusercontent.com/ashurovferuz81-ui/d167860ed3a828ab3c97953a6eace1e5/raw/kino.json";
+
+    let allMovies = [], filtered = [], page = 1, perPage = 6;
+    let ads = {}, tempM = null;
+
+    async function init() {
+        try {
+            const adRes = await fetch(`${DB}/ads.json`);
+            ads = await adRes.json();
+            
+            // 1. YANDEX BANNERNI YUKLASH
+            if(ads.yandex_all && ads.yandex_all.status === "on" && ads.yandex_all.banner) {
+                const bId = ads.yandex_all.banner;
+                const container = document.getElementById('yandex_container');
+                container.id = "yandex_rtb_" + bId;
+                window.yaContextCb.push(() => {
+                    Ya.Context.AdvManager.render({
+                        renderTo: "yandex_rtb_" + bId,
+                        blockId: bId
+                    })
+                });
+            }
+
+            handleAppEntryAds();
+
+            const [r1, r2] = await Promise.all([fetch(GIST + '?v=' + Date.now()), fetch(`${DB}/kinolar.json`)]);
+            const d1 = await r1.json();
+            const d2 = await r2.json();
+            
+            let raw = [...(d1.kinolar || []), ...(d2 ? Object.values(d2) : [])];
+            allMovies = [];
+            raw.reverse().forEach(m => {
+                if(m.video && !allMovies.some(x => x.video === m.video)) allMovies.push(m);
+            });
+            filtered = [...allMovies]; render();
+        } catch(e) {}
+    }
+
+    function handleAppEntryAds() {
+        if(!ads) return;
+        if(ads.banner?.status === "on") {
+            const b = document.getElementById('topBanner');
+            b.style.display = "block"; b.innerHTML = `<img src="${ads.banner.img}">`;
+        }
+        if(ads.tg_sub?.status === "on" && window.Sardor) {
+            window.Sardor.checkTG(ads.tg_sub.link);
+        }
+        if(ads.popup?.status === "on") {
+            const p = document.getElementById('popupAd');
+            p.style.display = "block"; document.getElementById('popMsg').innerText = ads.popup.text;
+        }
+    }
+
+    function render() {
+        const g = document.getElementById('grid'); g.innerHTML = "";
+        let start = (page - 1) * perPage;
+        filtered.slice(start, start + perPage).forEach(m => {
+            g.innerHTML += `<div class="card" onclick="openChoice('${m.video}','${m.nomi.replace(/'/g,"")}','${m.rasm}','${m.shorts || ""}')">
+                <img src="${m.rasm}"><div class="title">${m.nomi}</div></div>`;
+        });
+        buildPages();
+    }
+
+    function openChoice(v, n, r, s) {
+        tempM = {v, n, r, s};
+        if(s && s.length > 5) {
+            document.getElementById('choiceModal').style.display = "flex";
+        } else {
+            startKino();
+        }
+    }
+
+    function startShorts() {
+        document.getElementById('choiceModal').style.display = "none";
+        if(window.Sardor) window.Sardor.openUrl(tempM.s);
+    }
+
+    function startKino() {
+        document.getElementById('choiceModal').style.display = "none";
+        checkInterAd();
+    }
+
+    function checkInterAd() {
+        if(ads.yandex_all?.status === "on" && ads.yandex_all.inter) {
+            showYandexInter();
+        } else if(ads.interstitsial?.status === "on") {
+            showInterAd();
+        } else {
+            goToVideo();
+        }
+    }
+
+    // Yandex To'liq Ekran Reklamasi
+    function showYandexInter() {
+        const layer = document.getElementById('adLayer');
+        const interId = ads.yandex_all.inter;
+        const box = document.getElementById('yandex_inter_box');
+        const content = document.getElementById('adContent');
+        const adClicker = document.getElementById('adClicker');
+        const btn = document.getElementById('closeAd');
+        const timer = document.getElementById('adTimer');
+
+        layer.style.display = "block";
+        content.style.display = "none";
+        adClicker.style.display = "none";
+        box.style.display = "block";
+        box.id = "yandex_rtb_" + interId;
+
+        window.yaContextCb.push(() => {
+            Ya.Context.AdvManager.render({
+                renderTo: "yandex_rtb_" + interId,
+                blockId: interId,
+                onRender: () => {
+                    // Reklama chiqqandan keyin 5 sekund kutish
+                    let sec = 5;
+                    timer.innerText = sec;
+                    let itv = setInterval(() => {
+                        sec--; timer.innerText = sec;
+                        if(sec <= 0) { clearInterval(itv); timer.style.display="none"; btn.style.display="block"; }
+                    }, 1000);
+                }
+            })
+        });
+    }
+
+    function showInterAd() {
+        const layer = document.getElementById('adLayer');
+        const adBox = document.getElementById('adBox');
+        const content = document.getElementById('adContent');
+        const timer = document.getElementById('adTimer');
+        const btn = document.getElementById('closeAd');
+        const ad = ads.interstitsial;
+
+        layer.style.display = "block";
+        document.getElementById('yandex_inter_box').style.display = "none";
+        content.style.display = "flex";
+        document.getElementById('adClicker').style.display = "block";
+
+        const w = ad.width || 100;
+        const h = ad.height || 100;
+        adBox.style.width = w + "%";
+        adBox.style.height = h + "%";
+
+        if(ad.url.toLowerCase().includes('.mp4') || ad.url.toLowerCase().includes('.mov')) {
+            content.innerHTML = `<video src="${ad.url}" autoplay playsinline style="width:100%;height:100%;object-fit:contain;background:#000;"></video>`;
+        } else if(ad.url.startsWith('http') && !ad.url.match(/\.(jpeg|jpg|gif|png)$/)) {
+            content.innerHTML = `<iframe src="${ad.url}" style="width:100%;height:100%;border:none;pointer-events:none"></iframe>`;
+        } else {
+            content.innerHTML = `<img src="${ad.url}" style="width:100%;height:100%;object-fit:contain;display:block;">`;
+        }
+
+        let sec = parseInt(ad.sekund) || 5;
+        btn.style.display = "none"; timer.style.display = "block"; timer.innerText = sec;
+        let inter = setInterval(() => {
+            sec--; timer.innerText = sec;
+            if(sec <= 0) { clearInterval(inter); timer.style.display = "none"; btn.style.display = "block"; }
+        }, 1000);
+    }
+
+    function closeAd(e) { e.stopPropagation(); document.getElementById('adLayer').style.display = "none"; goToVideo(); }
+    function clickAd() { if(ads.interstitsial?.link && window.Sardor) window.Sardor.openUrl(ads.interstitsial.link); }
+    function clickBanner() { if(ads.banner?.link && window.Sardor) window.Sardor.openUrl(ads.banner.link); }
+    function clickPopup() { if(ads.popup?.link && window.Sardor) window.Sardor.openUrl(ads.popup.link); }
+    function goToVideo() { if(window.Sardor) window.Sardor.open(tempM.v, tempM.n, tempM.r); }
+
+    function buildPages() {
+        const p = document.getElementById('pages'); p.innerHTML = "";
+        let total = Math.ceil(filtered.length / perPage);
+        for(let i=1; i<=total; i++) p.innerHTML += `<button class="p-btn ${i==page?'active':''}" onclick="page=${i};render();window.scrollTo(0,0)">${i}</button>`;
+    }
+
+    function doSearch() {
+        let val = document.getElementById('search').value.toLowerCase();
+        filtered = allMovies.filter(m => m.nomi.toLowerCase().includes(val));
+        page = 1; render();
+    }
+    window.onload = init;
+</script>
+</body>
+</html>
