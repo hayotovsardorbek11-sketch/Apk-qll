@@ -1,0 +1,26 @@
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:orientation="vertical">
+	<ProgressBar
+		android:id="@+id/progressbar1"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:padding="8dp"
+		android:translationY="-200.0dp"
+		android:indeterminate="false"
+		style="?android:progressBarStyle" />
+	<com.google.android.gms.ads.AdView
+		android:id="@+id/adview1"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		app:adSize="SMART_BANNER"
+		app:adUnitId="ca-app-pub-4894471457326191/9640019626" />
+	<WebView
+		android:id="@+id/webview1"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent" />
+</LinearLayout>
